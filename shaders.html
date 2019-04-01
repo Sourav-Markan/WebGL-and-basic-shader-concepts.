@@ -1,0 +1,129 @@
+<html>
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache">
+</head>
+
+<script id="ball-vs" type="x-shader/x-vertex">
+uniform mat4 uMVMatrix;
+ // Used to oscillate the ball
+attribute vec4 aPosition;
+uniform mat4 uPMatrix;
+uniform float uSizeMult;
+
+void main() {
+    gl_PointSize = 150.0 * uSizeMult;
+    vec4 position = uMVMatrix * aPosition;
+    gl_Position = uPMatrix * position;
+}
+</script>
+
+<script id="ball-fs" type="x-shader/x-fragment">
+uniform float uTransparency;
+uniform sampler2D uSampler;
+uniform float uAmbient;
+void main() {
+    vec4 tex = texture2D(uSampler, gl_PointCoord);
+    x = tex.a * uTransparency
+    gl_FragColor = vec4(uAmbient * (vec3(0.01, 0.01, 0.01) + tex.rgb),x );
+}
+</script>
+
+<script id="ball-quad-vs" type="x-shader/x-vertex">
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+varying vec2 vTextureCoord;
+attribute vec2 aTextureCoord;
+attribute vec3 aPosition;
+void main() {
+    vec4 position = uMVMatrix * vec4(aPosition, 1.0);
+    vTextureCoord = aTextureCoord;
+    gl_Position = uPMatrix * position;
+}
+</script>
+
+<script id="ball-quad-fs" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+uniform float uAmbient;
+uniform sampler2D uSampler;
+uniform float uTransparency;
+varying vec2 vTextureCoord;
+void main() {
+    vec4 tex = texture2D(uSampler, vTextureCoord);
+    gl_FragColor = vec4(uAmbient * (vec3(0.01, 0.01, 0.01) + tex.rgb), tex.a * uTransparency);
+}
+</script>
+
+<script id="tunnel-vs" type="x-shader/x-vertex">
+varying vec2 vTextureCoord;
+varying float vViewZ;
+varying vec3 vLightDir;
+
+attribute vec2 aTextureCoord;
+attribute vec3 aVertexPosition;
+
+uniform mat4 uMVMatrix;
+uniform mat4 uPMatrix;
+uniform float uTextureOffset;
+
+void main() {
+    vec4 position = uMVMatrix * vec4(aVertexPosition, 1.0);
+    gl_Position = uPMatrix * position;
+    vViewZ = -position.z;
+    vTextureCoord = aTextureCoord + vec2(0.0, uTextureOffset);
+    vec3 lightPosition = vec3(0.0, -14.0, -50.0);
+    vLightDir = lightPosition - position.xyz;
+}
+</script>
+
+<script id="tunnel-fs" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+uniform float uFalloff;
+uniform float uAmbient;
+uniform float uNearStrength;
+
+varying vec2 vTextureCoord;
+varying float vViewZ;
+varying vec3 vLightDir;
+uniform sampler2D uSampler;
+void main() {
+    float nearAtt = uNearStrength/(vLightDir.x * vLightDir.x + vLightDir.y * vLightDir.y + vLightDir.z * vLightDir.z);
+    float att = max(uFalloff * pow(vViewZ, 1.5), max(uAmbient, nearAtt));
+    gl_FragColor = vec4(att * (vec3(0.1, 0.1, 0.1) + texture2D(uSampler, vTextureCoord).rgb), 1.0);
+}
+</script>
+
+<script id="wall-fs" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+precision highp sampler2D;
+#endif
+
+uniform float uShine;
+uniform float uAmbient;
+uniform float uNearStrength;
+uniform float uFalloff;
+
+varying vec2 vTextureCoord;
+varying float vViewZ;
+varying vec3 vLightDir;
+uniform sampler2D uSampler;
+
+void main() {
+    float nearAtt = uNearStrength/(vLightDir.x * vLightDir.x + vLightDir.y * vLightDir.y + vLightDir.z * vLightDir.z);
+    float att = max(uFalloff * pow(vViewZ, 1.5), max(uAmbient, nearAtt));
+    att *= (1.0 + uShine * pow((1.0 - vTextureCoord.t), 40.0));
+    gl_FragColor = vec4(att * (vec3(0.1, 0.1, 0.1) + texture2D(uSampler, vTextureCoord).rgb), 1.0);
+}
+</script>
+
+<body></body>
+</html>
+

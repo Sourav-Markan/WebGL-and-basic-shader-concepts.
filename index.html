@@ -1,0 +1,131 @@
+<html style="padding: 0; margin: 0">
+<head>
+<script type="text/javascript" src="gl-matrix/gl-matrix-min.js"></script>
+<script type="text/javascript" src="gl-utils.js"></script>
+<script type="text/javascript" src="events.js"></script>
+<script type="text/javascript" src="geometry.js"></script>
+<script type="text/javascript" src="sound.js"></script>
+<script type="text/javascript" src="loader.js"></script>
+<script id="main" type="text/javascript">
+
+GameInfo = function(){
+};
+
+GameInfo.INTRO_STATE   = 0;
+GameInfo.PLAY_STATE    = 1;
+GameInfo.state = GameInfo.INTRO_STATE;
+GameInfo.levelNum = 1;
+var startTime = new Date().getTime();
+
+function init() {
+    // Setup our background music
+    playSound("data/sound/rocket.mp3", 9999, 0.2, 0);
+    // Setup our mouse touch or accelerometer (in WebWorks) event handling
+	setupEventHandler();
+    // Initialize canvas WebGL context
+    var canvas = document.getElementById('canvas');
+    initGL(canvas);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+
+    // Set up perspective transform.
+    var pMatrix = mat4.create();
+    mat4.perspective(60, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0, pMatrix);
+
+    // Create loader to keep track of all loading objects.
+    loader = new Loader();
+
+    // Create and set up the ball.
+    var glow = new Texture("data/images/ball_backglow_256.png");
+    var tunnelRadius = 22;
+    ball = new Ball(tunnelRadius);
+    ball.initShader(pMatrix);
+    ball.setTexture(new Texture("data/images/ball_center_256.png"),glow);
+
+    // Create and set up the particles (for explosions).
+    particles = new Particles();
+
+    // Create and set up the tunnel cylinder.
+    cylinder = new Cylinder(8, [0,0,0], 300, tunnelRadius);
+    cylinder.initShader(pMatrix);
+    cylinder.setBackground(new Texture("data/images/" + "stonePatternBump.jpg"),new Texture("data/images/wall" + 5 + ".png"));
+
+    loadGame();
+    tick();
+}
+
+function loadGame() {
+    loader.load("data/levels/level" + 1 + ".json", function(responseText){
+        var walls = JSON.parse(responseText);
+        for (var i=0; i<walls.data.length; i++) {
+            cylinder.walls.push(new Wall(Math.PI*walls.data[i].angles[0]/180,Math.PI*walls.data[i].angles[1]/180,cylinder.radius, walls.data[i].position));
+            if (walls.data[i].position > cylinder.lastWallPos)
+                cylinder.lastWallPos = walls.data[i].position;
+        }
+    });
+}
+
+function draw() {
+    switch (GameInfo.state) {
+        case GameInfo.INTRO_STATE:
+            startGame();
+             break;
+        case GameInfo.PLAY_STATE:
+            drawLevel();
+            break;
+    }
+}
+
+function startGame() {
+    startTime = new Date().getTime();
+    GameInfo.state = GameInfo.PLAY_STATE;
+}
+
+function drawLevel() {
+    var currentTime = new Date().getTime();
+    var elapsedTime = (currentTime - startTime)/1000;
+    startTime = currentTime;
+    updateBallPosition(elapsedTime, currentTime);
+
+    // Clear the screen
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    
+    // Draw the cylinder
+    cylinder.draw(particles, currentTime, GameInfo);
+
+    // Draw the ball if we haven't crashed otherwise draw our explosion
+    ball.draw(GameInfo, currentTime);
+}
+
+function updateBallPosition(elapsedTime, currentTime) {
+    // If the ball crashed
+    if (ball.didCrash(cylinder)) {
+        playSound("data/sound/crash.mp3", 0, 1, 0);
+        GameInfo.state = GameInfo.EXPLODE_STATE;
+        setTimeout("GameInfo.state = GameInfo.LOSE_STATE;", 2000);
+    }
+    handleInput(elapsedTime);
+    // Update our cylinder position
+    cylinder.offset += cylinder.speed * elapsedTime;
+    // Update the cylinder speed
+    if (cylinder.speed < cylinder.maxSpeed)
+        cylinder.speed += elapsedTime * cylinder.acceleration;
+    else if (cylinder.speed > cylinder.maxSpeed)
+        cylinder.speed = cylinder.maxSpeed;
+}
+
+function tick() {
+    requestAnimFrame(tick);
+    draw();
+}
+</script>
+</head>
+<body style="padding: 0; margin: 0">
+    <div id="background" style="top: 0px; left: 0px; width: 1024px; height: 600px; background-color: black">
+        <canvas id="canvas" width="1024px" height="512px" style="margin-top: 44px; width: 1024px; height: 512px; border: none;"></canvas>
+    </div>
+    <iframe onload="init();" id="shaders" src="shaders.html" style="display:none"></iframe>
+</body>
+
+</html>

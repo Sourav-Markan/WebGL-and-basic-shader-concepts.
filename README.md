@@ -16,3 +16,17 @@ These tasks must be done using shaders and not javascript
 1. Make the world grayscale temporarily (using a button or timed)
 2. Textured walls
 3. Make the tiles flash periodically
+
+# Project Files:
+
+* index.html   - contains the main tunneltilt game state, render loop, and menus
+* shaders.html - contains the source code for the shaders used in tunneltilt
+* gl-utils.js  - contains various WebGL helper functions
+* events.js    - contains mouse / touch and accelerometer handlers for tunneltilt
+* geometry.js  - contains the geometry and respective logic for tunneltilt
+* sound.js     - contains code for playing sounds in WebWorks
+* loader.js    - contains XMLHttpRequest logic for asset load notification
+* data         - a folder that contains the images, sound, and levels for tunneltilt
+* gl-matrix    - a folder that contains gl-matrix-min.js a high performance matrix
+
+                 Use arrow to rotate tunnel and avoid ball from collision
